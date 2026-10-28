@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Botswana Safari Route Planner</title>
+<style>
+:root{--bg:#faf6ee;--card:#fff;--ink:#2b2418;--mute:#6b5f4a;--acc:#b5541c;--line:#e4d9c3}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1812;--card:#2a241b;--ink:#f3ead8;--mute:#b9ac93;--acc:#e08a4a;--line:#40382b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}
+main{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.5rem;margin:0 0 4px}
+.sub{color:var(--mute);margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+label.q{display:block;font-weight:600;margin:14px 0 8px}
+label.q:first-child{margin-top:0}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opts label{border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer}
+.opts input{position:absolute;opacity:0}
+.opts label:has(input:checked){background:var(--acc);border-color:var(--acc);color:#fff}
+button,.btn{display:block;width:100%;background:var(--acc);color:#fff;border:0;border-radius:10px;padding:14px;font-size:1rem;font-weight:600;text-align:center;text-decoration:none;cursor:pointer}
+#result{display:none}
+h2{font-size:1.15rem;margin:0 0 6px}
+ol{padding-left:20px;margin:8px 0}
+li{margin-bottom:4px}
+.tag{display:inline-block;background:var(--line);border-radius:6px;padding:2px 8px;font-size:.85rem;margin-bottom:8px}
+.note{color:var(--mute);font-size:.9rem}
+</style>
+</head>
+<body>
+<main>
+<h1>Botswana Safari Route Planner</h1>
+<p class="sub">Answer four quick questions and get a suggested route, from a Maun local.</p>
+
+<div class="card">
+<label class="q">How many days do you have?</label>
+<div class="opts">
+<label><input type="radio" name="days" value="8" checked>8 days</label>
+<label><input type="radio" name="days" value="10">10 days</label>
+<label><input type="radio" name="days" value="14">14 days</label>
+</div>
+
+<label class="q">How will you travel?</label>
+<div class="opts">
+<label><input type="radio" name="style" value="self" checked>Self-drive 4x4 camping</label>
+<label><input type="radio" name="style" value="lodge">Guided, lodges and camps</label>
+</div>
+
+<label class="q">When are you going?</label>
+<div class="opts">
+<label><input type="radio" name="season" value="dry" checked>May to October</label>
+<label><input type="radio" name="season" value="green">November to April</label>
+</div>
+
+<label class="q">What matters most? (pick any)</label>
+<div class="opts">
+<label><input type="checkbox" name="int" value="game">Big game</label>
+<label><input type="checkbox" name="int" value="water">Water and mokoro</label>
+<label><input type="checkbox" name="int" value="birds">Birds</label>
+<label><input type="checkbox" name="int" value="wild">Remote and wild</label>
+</div>
+<div style="height:16px"></div>
+<button id="go" type="button">Show my route</button>
+</div>
+
+<div id="result" class="card" aria-live="polite">
+<span class="tag" id="rtag"></span>
+<h2 id="rtitle"></h2>
+<ol id="rlist"></ol>
+<h2 style="margin-top:14px">Tips for your trip</h2>
+<ul id="tips"></ul>
+<p class="note">This is a rough outline. Distances, camp availability and costs change with the season, so it is worth planning the details properly.</p>
+</div>
+
+<div id="cta" class="card" style="display:none">
+<h2>Want a full custom itinerary?</h2>
+<p>Day-by-day plan, camp and lodge suggestions, realistic costs and driving times, written for your dates and budget.</p>
+<a class="btn" id="formlink" href="#" target="_blank" rel="noopener">Request my custom itinerary</a>
+</div>
+</main>
+
+<script>
+// Paste your Google Form link between the quotes below
+var FORM_URL = "https://forms.gle/XePMCVfrypW67qgy6";
+
+var ROUTES = {
+  "8": {title:"Delta and Chobe Highlights (8 days)", stops:[
+    "Days 1 to 3: Maun and the Okavango Delta",
+    "Day 4: Drive from Maun toward Nata, overnight stop near Nata",
+    "Day 5: Continue to Kasane",
+    "Days 6 to 7: Chobe River and Chobe National Park",
+    "Day 8: Depart from Kasane"]},
+  "10": {title:"Classic Botswana (10 days)", stops:[
+    "Day 1: Arrive in Maun",
+    "Days 2 to 3: Okavango Delta",
+    "Days 4 to 5: Moremi Game Reserve",
+    "Day 6: Khwai",
+    "Days 7 to 8: Savuti",
+    "Days 9 to 10: Kasane and Chobe"]},
+  "14": {title:"Grand Loop (14 days)", stops:[
+    "Days 1 to 3: Maun and the Okavango Delta",
+    "Days 4 to 5: Moremi Game Reserve",
+    "Day 6: Khwai",
+    "Days 7 to 8: Savuti",
+    "Days 9 to 10: Kasane and Chobe",
+    "Days 11 to 12: Makgadikgadi Pans",
+    "Days 13 to 14: Central Kalahari, then back to Maun"]}
+};
+
+var TIPS = {
+  self:"Self-drive means a properly equipped 4x4, spare tyres, extra fuel and water. Campsites in the parks book out early, so reserve well ahead.",
+  lodge:"Guided trips cost more per day but include transfers, meals and game drives, and remove the driving risk on sand and flooded tracks.",
+  dry:"May to October is the best time for game viewing. Animals gather near water, and the Delta floodwater usually peaks in the middle of the dry season.",
+  green:"November to April brings rain, green scenery and excellent birding. Some tracks get muddy or impassable, so build in extra buffer days.",
+  game:"For big game, spend the most time in Moremi, Savuti and Chobe.",
+  water:"For water, give the Delta extra nights and ask about mokoro trips when you book.",
+  birds:"For birds, the green season is the peak, and the Delta and Chobe riverfront are the strongest areas.",
+  wild:"For remote and wild, the Central Kalahari and Makgadikgadi are the quietest. Only go if you are comfortable being self-reliant or with a guide."
+};
+
+document.getElementById("go").onclick = function(){
+  var days = document.querySelector('input[name=days]:checked').value;
+  var style = document.querySelector('input[name=style]:checked').value;
+  var season = document.querySelector('input[name=season]:checked').value;
+  var ints = Array.prototype.map.call(document.querySelectorAll('input[name=int]:checked'), function(i){return i.value;});
+  var r = ROUTES[days];
+  document.getElementById("rtag").textContent = (style==="self" ? "Self-drive 4x4" : "Guided lodges and camps") + " · " + (season==="dry" ? "Dry season" : "Green season");
+  document.getElementById("rtitle").textContent = r.title;
+  var list = document.getElementById("rlist"); list.innerHTML = "";
+  r.stops.forEach(function(s){var li=document.createElement("li");li.textContent=s;list.appendChild(li);});
+  var tips = document.getElementById("tips"); tips.innerHTML = "";
+  [style, season].concat(ints).forEach(function(k){var li=document.createElement("li");li.textContent=TIPS[k];tips.appendChild(li);});
+  document.getElementById("result").style.display = "block";
+  document.getElementById("cta").style.display = "block";
+  document.getElementById("formlink").href = FORM_URL;
+  document.getElementById("result").scrollIntoView({behavior:"smooth"});
+};
+</script>
+</body>
+</html>
